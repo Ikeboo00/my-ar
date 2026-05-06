@@ -15,15 +15,23 @@
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Helvetica Neue', sans-serif; background: #0a0a0a; color: #fff; }
+    body { font-family: 'Helvetica Neue', sans-serif; background: #000; color: #fff; }
 
-    /* ── スタート画面 ── */
+    /* A-Frameシーンは常に背面で表示 */
+    a-scene { position: fixed; inset: 0; }
+
+    /* ── スタート画面（シーンの上に重ねる） ── */
     #start-screen {
       position: fixed; inset: 0; z-index: 100;
       background: #0a0a0a;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 24px;
       padding: 32px;
+      transition: opacity 0.4s;
+    }
+    #start-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
     }
     #start-screen h1 {
       font-size: clamp(28px, 7vw, 48px);
@@ -67,6 +75,7 @@
       pointer-events: none;
       display: none;
     }
+    #hud.visible { display: block; }
 
     /* ステータスバー */
     #status-bar {
@@ -159,57 +168,16 @@
 </head>
 <body>
 
-<!-- ① スタート画面 -->
-<div id="start-screen">
-  <div class="badge">
-    <div class="badge-dot"></div>
-    WebAR デモ
-  </div>
-  <h1>NFCタグで<br>ARを起動</h1>
-  <p>カメラで<strong>マーカー画像</strong>をスキャンすると<br>3Dキャラクターが出現します。<br>タップするとアニメーションが切り替わります。</p>
-  <button id="start-btn" onclick="startAR()">カメラを起動する</button>
-  <p style="font-size:12px;color:#444;">iOS Safari / Android Chrome 対応</p>
-</div>
-
-<!-- ② HUD -->
-<div id="hud">
-  <div id="status-bar">
-    <span id="status-text">マーカーを探しています…</span>
-    <button id="stop-btn" onclick="stopAR()">終了</button>
-  </div>
-
-  <div id="scan-hint">
-    <div class="corner tl"></div>
-    <div class="corner tr"></div>
-    <div class="corner bl"></div>
-    <div class="corner br"></div>
-    <div id="scan-label">SCAN MARKER</div>
-  </div>
-
-  <div id="anim-panel">
-    <button class="anim-btn active" onclick="switchAnim('Idle', this)">待機</button>
-    <button class="anim-btn" onclick="switchAnim('Walk', this)">歩く</button>
-    <button class="anim-btn" onclick="switchAnim('Run', this)">走る</button>
-    <button class="anim-btn" onclick="switchAnim('Jump', this)">ジャンプ</button>
-    <button class="anim-btn" onclick="switchAnim('Dance', this)">ダンス</button>
-  </div>
-</div>
-
-<!-- トースト -->
-<div id="toast"></div>
-
-<!-- ③ A-Frameシーン -->
-<a-scene id="ar-scene"
+<!-- ① A-Frameシーン（常に最背面で存在、autoStart: false） -->
+<a-scene
+  id="ar-scene"
   mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind; autoStart: false;"
   color-space="sRGB"
   renderer="colorManagement: true; physicallyCorrectLights: true"
   vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false"
-  style="display:none">
+  device-orientation-permission-ui="enabled: false">
 
   <a-assets>
-    <!-- サンプルとしてMindAR公式のGLTFモデルを使用 -->
-    <!-- 本番では自分の.glbに差し替えてください -->
     <a-asset-item id="model"
       src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/softmind/scene.gltf">
     </a-asset-item>
@@ -229,7 +197,7 @@
   <!-- 画像認識アンカー -->
   <a-entity id="anchor" mindar-image-target="targetIndex: 0">
 
-    <!-- 床のリング（着地感を出す） -->
+    <!-- 床のリング -->
     <a-ring
       color="#00ff88"
       opacity="0.25"
@@ -251,7 +219,7 @@
       shadow="cast: true; receive: false">
     </a-gltf-model>
 
-    <!-- タップ時のバースト演出（非表示で待機） -->
+    <!-- タップ時のバースト演出 -->
     <a-entity id="burst" position="0 0.15 0">
       <a-ring id="burst-ring"
         color="#00ff88" opacity="0"
@@ -263,52 +231,100 @@
   </a-entity>
 </a-scene>
 
+<!-- ② スタート画面（シーンの上に重ねる） -->
+<div id="start-screen">
+  <div class="badge">
+    <div class="badge-dot"></div>
+    WebAR デモ
+  </div>
+  <h1>NFCタグで<br>ARを起動</h1>
+  <p>カメラで<strong>マーカー画像</strong>をスキャンすると<br>3Dキャラクターが出現します。<br>タップするとアニメーションが切り替わります。</p>
+  <button id="start-btn">カメラを起動する</button>
+  <p style="font-size:12px;color:#444;">iOS Safari / Android Chrome 対応</p>
+</div>
+
+<!-- ③ HUD -->
+<div id="hud">
+  <div id="status-bar">
+    <span id="status-text">マーカーを探しています…</span>
+    <button id="stop-btn">終了</button>
+  </div>
+  <div id="scan-hint">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+    <div id="scan-label">SCAN MARKER</div>
+  </div>
+  <div id="anim-panel">
+    <button class="anim-btn active" data-clip="default">待機</button>
+    <button class="anim-btn" data-clip="Walk">歩く</button>
+    <button class="anim-btn" data-clip="Run">走る</button>
+    <button class="anim-btn" data-clip="Jump">ジャンプ</button>
+    <button class="anim-btn" data-clip="Dance">ダンス</button>
+  </div>
+</div>
+
+<!-- トースト -->
+<div id="toast"></div>
+
 <script>
-/* ─────────────────────────────────────────
-   状態管理
-───────────────────────────────────────── */
-let arStarted = false;
-let targetFound = false;
-let sceneEl, mindarEl, modelEl;
+let mindarSystem = null;
+let modelEl = null;
+let eventsSetup = false;
 
-/* ─────────────────────────────────────────
-   AR起動
-───────────────────────────────────────── */
-function startAR() {
-  document.getElementById('start-screen').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  document.getElementById('ar-scene').style.display = 'block';
-
-  sceneEl = document.getElementById('ar-scene');
+/* ─── シーン読み込み完了を待って参照を取得 ─── */
+const sceneEl = document.getElementById('ar-scene');
+sceneEl.addEventListener('loaded', () => {
+  mindarSystem = sceneEl.components['mindar-image-system'];
   modelEl = document.getElementById('myModel');
+  console.log('[AR] Scene loaded. mindarSystem:', !!mindarSystem);
+});
 
-  sceneEl.addEventListener('loaded', () => {
-    mindarEl = sceneEl.components['mindar-image-system'];
-    if (mindarEl) mindarEl.start();
-    arStarted = true;
+/* ─── カメラ起動ボタン ─── */
+document.getElementById('start-btn').addEventListener('click', () => {
+  console.log('[AR] Start button clicked. mindarSystem:', !!mindarSystem);
+
+  if (!mindarSystem) {
+    showToast('まだ読み込み中です。少し待ってからもう一度タップしてください');
+    return;
+  }
+
+  // iOSはユーザー操作の直後・同期的に呼ぶ必要がある
+  try {
+    mindarSystem.start();
+    console.log('[AR] mindarSystem.start() called');
+  } catch(e) {
+    console.error('[AR] start error:', e);
+    showToast('カメラ起動に失敗しました: ' + e.message);
+    return;
+  }
+
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('hud').classList.add('visible');
+
+  if (!eventsSetup) {
     setupEvents();
-  });
-}
+    eventsSetup = true;
+  }
+});
 
-/* ─────────────────────────────────────────
-   AR停止
-───────────────────────────────────────── */
-function stopAR() {
-  if (mindarEl) mindarEl.stop();
-  document.getElementById('ar-scene').style.display = 'none';
-  document.getElementById('hud').style.display = 'none';
-  document.getElementById('start-screen').style.display = 'flex';
-  arStarted = false; targetFound = false;
-}
+/* ─── 終了ボタン ─── */
+document.getElementById('stop-btn').addEventListener('click', () => {
+  if (mindarSystem) mindarSystem.stop();
+  document.getElementById('start-screen').classList.remove('hidden');
+  document.getElementById('hud').classList.remove('visible');
+  document.getElementById('anim-panel').classList.remove('visible');
+  document.getElementById('scan-hint').classList.remove('hidden');
+  document.getElementById('status-text').textContent = 'マーカーを探しています…';
+});
 
-/* ─────────────────────────────────────────
-   マーカー検出イベント
-───────────────────────────────────────── */
+/* ─── マーカー検出イベント ─── */
 function setupEvents() {
   const anchor = document.getElementById('anchor');
 
   anchor.addEventListener('targetFound', () => {
-    targetFound = true;
+    console.log('[AR] Target found!');
     document.getElementById('status-text').textContent = 'マーカー検出！タップしてね';
     document.getElementById('scan-hint').classList.add('hidden');
     document.getElementById('anim-panel').classList.add('visible');
@@ -316,38 +332,35 @@ function setupEvents() {
   });
 
   anchor.addEventListener('targetLost', () => {
-    targetFound = false;
+    console.log('[AR] Target lost');
     document.getElementById('status-text').textContent = 'マーカーを探しています…';
     document.getElementById('scan-hint').classList.remove('hidden');
     document.getElementById('anim-panel').classList.remove('visible');
   });
 
-  // モデルタップ → ランダムアニメに切り替え
-  modelEl.addEventListener('click', () => {
+  if (modelEl) {
+    modelEl.addEventListener('click', () => {
+      triggerBurst();
+      showToast('タップ！');
+    });
+  }
+}
+
+/* ─── アニメーションボタン ─── */
+document.querySelectorAll('.anim-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!modelEl) return;
+    const clip = btn.dataset.clip;
+    modelEl.setAttribute('animation-mixer',
+      `clip: ${clip}; loop: repeat; crossFadeDuration: 0.3`);
+    document.querySelectorAll('.anim-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
     triggerBurst();
-    showToast('タップ！アニメーションが切り替わりました');
+    showToast(`「${btn.textContent}」再生中`);
   });
-}
+});
 
-/* ─────────────────────────────────────────
-   アニメーション切り替え（ボタン）
-───────────────────────────────────────── */
-function switchAnim(clipName, btn) {
-  if (!modelEl) return;
-  modelEl.setAttribute('animation-mixer',
-    `clip: ${clipName}; loop: repeat; crossFadeDuration: 0.3`);
-
-  // ボタンのアクティブ状態を更新
-  document.querySelectorAll('.anim-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-
-  triggerBurst();
-  showToast(`「${btn.textContent}」アニメーション再生中`);
-}
-
-/* ─────────────────────────────────────────
-   タップ時のバースト演出
-───────────────────────────────────────── */
+/* ─── バースト演出 ─── */
 function triggerBurst() {
   const ring = document.getElementById('burst-ring');
   ring.setAttribute('opacity', '0.7');
@@ -361,9 +374,7 @@ function triggerBurst() {
   }, 420);
 }
 
-/* ─────────────────────────────────────────
-   トースト通知
-───────────────────────────────────────── */
+/* ─── トースト通知 ─── */
 function showToast(msg) {
   const toast = document.getElementById('toast');
   toast.textContent = msg;
