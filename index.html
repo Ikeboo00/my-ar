@@ -123,7 +123,7 @@
 <!-- A-Frameシーン（常に表示、autoStart: false） -->
 <a-scene
   id="ar-scene"
-  mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind; autoStart: false;"
+  mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
   color-space="sRGB"
   renderer="colorManagement: true; physicallyCorrectLights: true"
   vr-mode-ui="enabled: false"
@@ -131,11 +131,11 @@
 
   <a-assets>
     <a-asset-item id="model"
-      src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/softmind/scene.gltf">
+      src="./model.glb">
     </a-asset-item>
   </a-assets>
 
-  <a-camera position="-0.5 0 0" look-controls="enabled: false">
+  <a-camera position="0 0 0" look-controls="enabled: false">
     <a-cursor fuse="false" raycaster="objects: .clickable" color="#00ff88" opacity="0.8" scale="0.5 0.5 0.5"></a-cursor>
   </a-camera>
 
@@ -145,7 +145,7 @@
       animation="property: rotation; from: -90 0 0; to: -90 360 0; dur: 4000; loop: true; easing: linear">
     </a-ring>
     <a-gltf-model id="myModel" class="clickable" src="#model"
-      position="0 0 0" scale="0.01 0.01 0.01"
+      position="-1 0 0" scale="0.01 0.01 0.01"
       animation-mixer="clip: default; loop: repeat; crossFadeDuration: 0.3">
     </a-gltf-model>
     <a-entity id="burst" position="0 0.08 0">
